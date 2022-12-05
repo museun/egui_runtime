@@ -16,10 +16,12 @@ pub fn start() -> impl FnOnce() {
 
     let (tx, rx) = oneshot::channel::<()>();
     let thread = std::thread::spawn(move || {
-        rt.block_on(async move {
-            tokio::select! {
-                _ = std::future::pending::<()>() => {}
-                _ = rx => {}
+        rt.block_on({
+            async move {
+                tokio::select! {
+                    _ = std::future::pending::<()>() => {}
+                    _ = rx => {}
+                }
             }
         });
     });
@@ -30,9 +32,9 @@ pub fn start() -> impl FnOnce() {
     }
 }
 
-pub fn enter(func: impl FnOnce()) {
+pub fn enter<T>(func: impl FnOnce() -> T) -> T {
     let _g = HANDLE.get().expect("runtime initialization").enter();
-    func();
+    func()
 }
 
 pub fn spawn<T>(fut: impl Future<Output = T> + Send + Sync + 'static) -> Receiver<T>
